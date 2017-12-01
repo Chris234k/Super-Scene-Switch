@@ -33,71 +33,69 @@ public class SuperSceneSwitch : EditorWindow
 
     void OnGUI()
     {
-        if ( !Application.isPlaying ) // TODO(Chris) Not really sure what to do with the window while playing. Don't want to close it (in case it is docked)
+        if ( Application.isPlaying ) // TODO(Chris) Not really sure what to do with the window while playing. Don't want to close it (in case it is docked)
         {
-            if ( !isWindowPositioned )
+            isWindowPositioned = true; // Prevent ShowWindow from queuing up a window position change while the application is running
+            return;
+        }
+
+        if ( !isWindowPositioned && window )
+        {
+            // Position window so that you don't have to move your mouse to click the first scene
+            Vector2 mousePos = GUIUtility.GUIToScreenPoint(Event.current.mousePosition);
+
+            float width = 200, height = 200;
+            window.position = new Rect(mousePos.x - width / 2, mousePos.y, width, height);
+
+            isWindowPositioned = true;
+        }
+
+        if ( knownScenes != null && knownScenes.Length > 0 ) // Scene data is available
+        {
+            scrollPos = GUILayout.BeginScrollView(scrollPos);
+            GUILayout.BeginVertical();
+
+            for ( int i = 0; i < knownScenes.Length; i++ )
             {
-                if ( !window ) // Most commonly handles script reloading, where the window is open but window has been cleared
+                GUILayout.BeginHorizontal();
+
+                if ( GUILayout.Button(knownScenes[i].name) )
                 {
-                    ShowWindow();
+                    if ( EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo() ) // Confirm user wants to leave scene with unsaved work (passthrough if scene is not dirty)
+                    {
+                        EditorSceneManager.OpenScene(knownScenes[i].path);
+                        Close(); // Close SuperSceneSwitch, it has done its job
+                    }
                 }
 
-                // Position window so that you don't have to move your mouse to click the first scene
-                Vector2 mousePos = GUIUtility.GUIToScreenPoint(Event.current.mousePosition);
+                if ( EditorSceneManager.playModeStartScene != null && EditorSceneManager.playModeStartScene.name == knownScenes[i].name ) // New in 2017.1, play button loads different scene than the open one
+                {
+                    GUI.backgroundColor = Color.gray; // Highlight scene that will play
+                }
 
-                float width = 200, height = 200;
-                window.position = new Rect(mousePos.x - width / 2, mousePos.y, width, height);
+                if ( GUILayout.Button("|>", GUILayout.ExpandWidth(false)) ) // Click to set play mode start scene
+                {
+                    SetPlayModeStartScene(knownScenes[i]);
+                }
 
-                isWindowPositioned = true;
+                GUI.backgroundColor = Color.white; // Reset colors (in case this scene is the play mode scene)
+
+                GUILayout.EndHorizontal();
             }
 
-            if ( knownScenes != null && knownScenes.Length > 0 ) // Scene data is available
+            if ( GUILayout.Button("[Reload Scene Info]") ) // If the build scene list updates while SuperSceneSwitch is open, a force reload will update the list
             {
-                scrollPos = GUILayout.BeginScrollView(scrollPos);
-                GUILayout.BeginVertical();
-
-                for ( int i = 0; i < knownScenes.Length; i++ )
-                {
-                    GUILayout.BeginHorizontal();
-
-                    if ( GUILayout.Button(knownScenes[i].name) )
-                    {
-                        if ( EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo() ) // Confirm user wants to leave scene with unsaved work (passthrough if scene is not dirty)
-                        {
-                            EditorSceneManager.OpenScene(knownScenes[i].path);
-                            Close(); // Close SuperSceneSwitch, it has done its job
-                        }
-                    }
-
-                    if ( EditorSceneManager.playModeStartScene.name == knownScenes[i].name ) // New in 2017.1, play button loads different scene than the open one
-                    {
-                        GUI.backgroundColor = Color.gray; // Highlight scene that will play
-                    }
-
-                    if ( GUILayout.Button("|>", GUILayout.ExpandWidth(false)) ) // Click to set play mode start scene
-                    {
-                        SetPlayModeStartScene(knownScenes[i].path);
-                    }
-
-                    GUI.backgroundColor = Color.white; // Reset colors (in case this scene is the play mode scene)
-
-                    GUILayout.EndHorizontal();
-                }
-
-                if ( GUILayout.Button("[Force Load Scenes]") ) // If the build scene list updates while SuperSceneSwitch is open, a force reload will update the list
-                {
-                    knownScenes = GetScenes();
-                }
-
-                GUILayout.EndVertical();
-                GUILayout.EndScrollView();
+                knownScenes = GetScenes();
             }
-            else
+
+            GUILayout.EndVertical();
+            GUILayout.EndScrollView();
+        }
+        else
+        {
+            if ( GUILayout.Button("[Load Scene Info]", GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true)) )
             {
-                if ( GUILayout.Button("[Load Scenes]", GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true)) )
-                {
-                    knownScenes = GetScenes();
-                }
+                knownScenes = GetScenes();
             }
         }
     }
@@ -119,16 +117,24 @@ public class SuperSceneSwitch : EditorWindow
         return scenes;
     }
 
-    void SetPlayModeStartScene(string scenePath)
+    void SetPlayModeStartScene(SceneData data)
     {
-        SceneAsset scene = AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath);
+        SceneAsset scene = AssetDatabase.LoadAssetAtPath<SceneAsset>(data.path);
         if ( scene != null )
         {
-            EditorSceneManager.playModeStartScene = scene;
+            if ( EditorSceneManager.playModeStartScene != null && EditorSceneManager.playModeStartScene.name == data.name ) // Clear if the current scene was passed in
+            {
+                EditorSceneManager.playModeStartScene = null;
+            }
+            else
+            {
+                EditorSceneManager.playModeStartScene = scene;
+            }
+
         }
         else
         {
-            Debug.Log("Could not find scene " + scenePath);
+            Debug.Log("Could not find scene " + data.path);
         }
     }
 }

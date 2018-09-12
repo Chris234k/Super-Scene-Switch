@@ -1,3 +1,8 @@
+// Source: https://github.com/Chris234k/Super-Scene-Switch
+//
+// Place this script in an Editor folder.
+// Press F1 to open the window.
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -63,22 +68,44 @@ public class SuperSceneSwitch : EditorWindow
                 {
                     if ( EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo() ) // Confirm user wants to leave scene with unsaved work (passthrough if scene is not dirty)
                     {
+						// TODO(Chris) Don't close the window if it is docked!
+						
                         EditorSceneManager.OpenScene(knownScenes[i].path);
                         Close(); // Close SuperSceneSwitch, it has done its job
                     }
                 }
 
-                if ( EditorSceneManager.playModeStartScene != null && EditorSceneManager.playModeStartScene.name == knownScenes[i].name ) // New in 2017.1, play button loads different scene than the open one
+				GUILayout.BeginHorizontal();
+				if(IsSceneOpen(knownScenes[i].path))
+				{
+					if ( GUILayout.Button("-", GUILayout.ExpandWidth(false)) ) // Click to remove from open scenes
+					{
+						UnityEngine.SceneManagement.Scene scene = EditorSceneManager.GetSceneByPath(knownScenes[i].path);
+						EditorSceneManager.CloseScene(scene, false);
+					}
+				}
+				else
+				{
+					if ( GUILayout.Button("+", GUILayout.ExpandWidth(false)) ) // Click to add to open scenes
+					{
+						EditorSceneManager.OpenScene(knownScenes[i].path, OpenSceneMode.Additive);
+					}
+				}
+
+				// New in 2017.1, play button loads different scene than the open one
+				bool isPlayModeStartScene = EditorSceneManager.playModeStartScene != null && EditorSceneManager.playModeStartScene.name == knownScenes[i].name;
+				if ( isPlayModeStartScene ) 
                 {
                     GUI.backgroundColor = Color.gray; // Highlight scene that will play
                 }
 
-                if ( GUILayout.Button("|>", GUILayout.ExpandWidth(false)) ) // Click to set play mode start scene
+                if ( GUILayout.Button("▶", GUILayout.ExpandWidth(false)) ) // Click to set play mode start scene
                 {
-                    SetPlayModeStartScene(knownScenes[i]);
+					SetPlayModeStartScene(knownScenes[i]);
                 }
 
-                GUI.backgroundColor = Color.white; // Reset colors (in case this scene is the play mode scene)
+				GUI.backgroundColor = Color.white; // Reset colors (in case this scene is the play mode scene)
+				GUILayout.EndHorizontal();
 
                 GUILayout.EndHorizontal();
             }
@@ -93,10 +120,7 @@ public class SuperSceneSwitch : EditorWindow
         }
         else
         {
-            if ( GUILayout.Button("[Load Scene Info]", GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true)) )
-            {
-                knownScenes = GetScenes();
-            }
+			knownScenes = GetScenes();
         }
     }
 
@@ -137,4 +161,20 @@ public class SuperSceneSwitch : EditorWindow
             Debug.Log("Could not find scene " + data.path);
         }
     }
+
+	bool IsSceneOpen(string scenePath)
+	{
+		bool result = false;
+
+		for(int i = 0; i < EditorSceneManager.loadedSceneCount; i++)
+		{
+			if(scenePath == EditorSceneManager.GetSceneAt(i).path)
+			{
+				result = true;
+				break;
+			}
+		}
+
+		return result;
+	}
 }

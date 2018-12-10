@@ -57,6 +57,9 @@ public class SuperSceneSwitch : EditorWindow
 
         if ( knownScenes != null && knownScenes.Length > 0 ) // Scene data is available
         {
+            // TODO(chris) Regularly produces the following error:
+            // ArgumentException: Getting control 0's position in a group with only 0 controls when doing Repaint
+            
             scrollPos = GUILayout.BeginScrollView(scrollPos);
             GUILayout.BeginVertical();
 
@@ -74,23 +77,22 @@ public class SuperSceneSwitch : EditorWindow
                         Close(); // Close SuperSceneSwitch, it has done its job
                     }
                 }
-
-				GUILayout.BeginHorizontal();
-				if(IsSceneOpen(knownScenes[i].path))
-				{
-					if ( GUILayout.Button("-", GUILayout.ExpandWidth(false)) ) // Click to remove from open scenes
-					{
-						UnityEngine.SceneManagement.Scene scene = EditorSceneManager.GetSceneByPath(knownScenes[i].path);
+                
+                bool sceneOpen = IsSceneOpen(knownScenes[i].path);
+                string buttonText = sceneOpen ? "+" : "-";
+                
+                if(GUILayout.Button(buttonText, GUILayout.Width(30)))
+                {
+                    if(sceneOpen)  // Click to remove from open scenes
+                    {
+                        UnityEngine.SceneManagement.Scene scene = EditorSceneManager.GetSceneByPath(knownScenes[i].path);
 						EditorSceneManager.CloseScene(scene, false);
-					}
-				}
-				else
-				{
-					if ( GUILayout.Button("+", GUILayout.ExpandWidth(false)) ) // Click to add to open scenes
-					{
-						EditorSceneManager.OpenScene(knownScenes[i].path, OpenSceneMode.Additive);
-					}
-				}
+                    }
+                    else // Click to add to open scenes
+                    {
+                        EditorSceneManager.OpenScene(knownScenes[i].path, OpenSceneMode.Additive);
+                    }
+                }
 
 				// New in 2017.1, play button loads different scene than the open one
 				bool isPlayModeStartScene = EditorSceneManager.playModeStartScene != null && EditorSceneManager.playModeStartScene.name == knownScenes[i].name;
@@ -99,13 +101,12 @@ public class SuperSceneSwitch : EditorWindow
                     GUI.backgroundColor = Color.gray; // Highlight scene that will play
                 }
 
-                if ( GUILayout.Button("▶", GUILayout.ExpandWidth(false)) ) // Click to set play mode start scene
+                if ( GUILayout.Button("▶", GUILayout.Width(30)) ) // Click to set play mode start scene
                 {
 					SetPlayModeStartScene(knownScenes[i]);
                 }
 
 				GUI.backgroundColor = Color.white; // Reset colors (in case this scene is the play mode scene)
-				GUILayout.EndHorizontal();
 
                 GUILayout.EndHorizontal();
             }

@@ -79,7 +79,7 @@ public class SuperSceneSwitch : EditorWindow
                 }
                 
                 bool sceneOpen = IsSceneOpen(knownScenes[i].path);
-                string buttonText = sceneOpen ? "+" : "-";
+                string buttonText = sceneOpen ? "-" : "+";
                 
                 if(GUILayout.Button(buttonText, GUILayout.Width(30)))
                 {
